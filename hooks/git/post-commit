@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# post-commit - Play sound after commits, categorized by type
+
+DEVRADIO_DIR="${DEVRADIO_DIR:-$HOME/.dev-radio}"
+PLAY="$DEVRADIO_DIR/lib/play.sh"
+
+[ -x "$PLAY" ] || exit 0
+
+COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
+
+if echo "$COMMIT_MSG" | grep -Eqi "^(feat|feature|fix|bugfix|refactor):"; then
+  "$PLAY" success 2>/dev/null &
+else
+  "$PLAY" neutral 2>/dev/null &
+fi

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# post-checkout - Play sound when switching branches
+
+DEVRADIO_DIR="${DEVRADIO_DIR:-$HOME/.dev-radio}"
+PLAY="$DEVRADIO_DIR/lib/play.sh"
+
+[ -x "$PLAY" ] || exit 0
+
+BRANCH_SWITCH="${3:-0}"
+if [ "$BRANCH_SWITCH" = "1" ]; then
+  "$PLAY" neutral 2>/dev/null &
+fi

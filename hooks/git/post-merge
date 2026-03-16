@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# post-merge - Play sound after merge
+
+DEVRADIO_DIR="${DEVRADIO_DIR:-$HOME/.dev-radio}"
+PLAY="$DEVRADIO_DIR/lib/play.sh"
+
+[ -x "$PLAY" ] || exit 0
+
+"$PLAY" success 2>/dev/null &
