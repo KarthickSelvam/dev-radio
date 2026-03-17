@@ -47,6 +47,89 @@ echo "dev-radio installer"
 echo "==================="
 echo ""
 
+# ─── Preflight checks ───────────────────────────────────────────────
+
+WARNINGS=0
+
+# Audio player (required — the whole point)
+PLAYER=""
+for cmd in afplay paplay pw-play aplay mpv ffplay; do
+  if command -v "$cmd" &>/dev/null; then
+    PLAYER="$cmd"
+    break
+  fi
+done
+if [ -z "$PLAYER" ]; then
+  echo "ERROR: No audio player found." >&2
+  echo "  dev-radio needs one of: afplay (macOS), paplay, pw-play, aplay (Linux), mpv, or ffplay" >&2
+  echo "  Install one and try again." >&2
+  exit 1
+fi
+echo "  Audio player: $PLAYER"
+
+# Claude Code (needed for hooks)
+if [ "$SETUP_CLAUDE" = true ]; then
+  if ! command -v claude &>/dev/null; then
+    echo "  WARNING: Claude Code CLI not found in PATH."
+    echo "           Hooks will be configured but won't fire until Claude Code is installed."
+    echo "           Install: https://docs.anthropic.com/en/docs/claude-code"
+    WARNINGS=$((WARNINGS + 1))
+  else
+    echo "  Claude Code: $(claude --version 2>/dev/null || echo "found")"
+  fi
+fi
+
+# jq (needed for safe settings.json editing)
+if [ "$SETUP_CLAUDE" = true ] && ! command -v jq &>/dev/null; then
+  echo "  WARNING: jq not found. Cannot auto-configure Claude Code hooks."
+  echo "           You'll need to add hooks manually (see examples/claude-code-hooks.json)."
+  echo "           Install: brew install jq / apt install jq"
+  WARNINGS=$((WARNINGS + 1))
+fi
+
+# TTS engine (needed for sound generation)
+if [ "$GENERATE_SOUNDS" = true ]; then
+  TTS_FOUND=false
+  for cmd in say espeak-ng espeak; do
+    if command -v "$cmd" &>/dev/null; then
+      TTS_FOUND=true
+      echo "  TTS engine: $cmd"
+      break
+    fi
+  done
+  if [ "$TTS_FOUND" = false ]; then
+    echo "  WARNING: No TTS engine found (say, espeak-ng, espeak)."
+    echo "           Sound generation will be skipped. Shipped sounds will still work."
+    echo "           Linux: apt install espeak-ng"
+    GENERATE_SOUNDS=false
+    WARNINGS=$((WARNINGS + 1))
+  fi
+fi
+
+# sox (only when --radio requested)
+if [ "$RADIO_MODE" = true ] && ! command -v sox &>/dev/null; then
+  echo "  WARNING: sox not found. Radio effects will be skipped."
+  echo "           Install: brew install sox / apt install sox"
+  RADIO_MODE=false
+  WARNINGS=$((WARNINGS + 1))
+fi
+
+# git (needed for git hooks)
+if [ "$SETUP_GIT_HOOKS" = true ] && ! command -v git &>/dev/null; then
+  echo "  WARNING: git not found. Skipping git hooks setup."
+  SETUP_GIT_HOOKS=false
+  WARNINGS=$((WARNINGS + 1))
+fi
+
+if [ "$WARNINGS" -gt 0 ]; then
+  echo ""
+  echo "  $WARNINGS warning(s) above. Continuing with available features..."
+fi
+
+echo ""
+
+# ─── Install ─────────────────────────────────────────────────────────
+
 # Step 1: Install files
 if [ "$LOCAL_MODE" = true ]; then
   INSTALL_DIR="$SCRIPT_DIR"
